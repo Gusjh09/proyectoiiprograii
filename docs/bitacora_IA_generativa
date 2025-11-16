@@ -25,3 +25,32 @@ confidencialidad o licencias que lo prohíban.
 significativas de la IA en el informe o en la documentación (por ejemplo, 
 indicando que ciertas ideas o fragmentos de código fueron sugeridos y luego 
 adaptados por una herramienta de IA generativa).
+
+-----------------------------------------------------------ENTRADAS------------------------------------------------------------------
+Fecha:15/11/25
+Derramienta: COPILOT
+Descripción: SOPORTE PARA TOMAR VARIAS FILAS DE MESES Y AGRUPARLAS EN UNA SOLA FILA LLAMADA AÑO
+Resumen [Código generado]: 
+# Supongamos que tu DataFrame se llama df
+# Paso 1: Convertir la columna 'date' a tipo datetime
+df['date'] = pd.to_datetime(df['date'])
+
+# Paso 2: Crear una columna 'year'
+df['year'] = df['date'].dt.year
+
+# Paso 3: Agrupar por país y año, sumando los casos
+df_grouped = df.groupby(['country', 'year'], as_index=False)['cases'].sum()
+Reflexión: HUBO QUE CAMBIAR LOS DATOS DEL DATA FRAME, NO SE DESCARTÓ NINGUN CÓDIGO, FUE DE AYUDA EL SABER QUE HABÍA QUE CONVERTIR LA COLUMNA A DATATIME
+
+
+Fecha:
+Derramienta:
+Descripción:
+Resumen [Código generado]: 
+Reflexión:
+
+Fecha:
+Derramienta:
+Descripción:
+Resumen [Código generado]: 
+Reflexión:
