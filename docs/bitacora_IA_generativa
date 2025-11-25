@@ -43,14 +43,140 @@ df_grouped = df.groupby(['country', 'year'], as_index=False)['cases'].sum()
 Reflexión: HUBO QUE CAMBIAR LOS DATOS DEL DATA FRAME, NO SE DESCARTÓ NINGUN CÓDIGO, FUE DE AYUDA EL SABER QUE HABÍA QUE CONVERTIR LA COLUMNA A DATATIME
 
 
-Fecha:
-Derramienta:
+Fecha: 23/11/2025
+Derramienta: Copilot
+Descripción: AYUDA PARA PROCESAR EL JSON DEL BANCO MUNDIAL PARA PASARLO A FORMATO TIDY
+Resumen [Código generado]: 
+#Esta base es la de tipo json. requiere un tratamiento especial
+#Quitar las primeras filas que no aportan informacion
+df_temp = df_gasto_salud.copy()
+df_temp = df_temp.iloc[2:].reset_index(drop=True)
+
+#Usar la primera fila como encabezado real
+#La nueva fila 0 ahora tiene los nombres reales de columnas (Country Name, Country Code, Indicator Name, 2000, 2001, ...)
+new_header = df_temp.iloc[0]
+df_temp = df_temp.iloc[1:].reset_index(drop=True)
+df_temp.columns = new_header
+
+#Eliminar columnas 'Unnamed' y vacías que hay varias
+df_temp = df_temp.loc[:, ~df_temp.columns.astype(str).str.contains(r'^Unnamed', na=False)]
+df_temp = df_temp[[c for c in df_temp.columns if str(c).strip() != '' and c is not None]]
+
+#Pasar a formato largo (tidy) year–value o hacer la transposición
+#nombres de columnas
+rename_map = {
+    'Country Name': 'country_name',
+    'Country Code': 'country_code',
+    'Indicator Name': 'indicator_name',
+    'Indicator Code': 'indicator_code'  # por si existiera
+}
+df_temp = df_temp.rename(columns={k: v for k, v in rename_map.items() if k in df_temp.columns})
+
+#Detectar columnas de año: están como '2000.0', '2001.0',...
+def es_col_anio(col):
+    s = str(col).strip()
+    s = s[:-2] if s.endswith('.0') else s
+    return s.isdigit() and len(s) == 4
+
+year_cols = [c for c in df_temp.columns if es_col_anio(c)]
+if not year_cols:
+    raise ValueError("No se detectaron columnas de año. Revisa los nombres (p.ej. '2000.0').")
+
+#Construir id_vars presentes
+id_vars = [c for c in ['country_name', 'country_code', 'indicator_name', 'indicator_code'] if c in df_temp.columns]
+
+df_largo = df_temp.melt(
+    id_vars=id_vars,
+    value_vars=year_cols,
+    var_name='year_raw',
+    value_name='value'
+)
+
+#Convertir 'year_raw' a 'year' numérico limpio
+def limpiar_year(y):
+    s = str(y).strip()
+    s = s[:-2] if s.endswith('.0') else s
+    return pd.to_numeric(s, errors='coerce')
+
+df_largo['year'] = df_largo['year_raw'].apply(limpiar_year)
+df_largo.drop(columns=['year_raw'], inplace=True)
+
+#Tipos y limpieza básica
+df_largo['value'] = pd.to_numeric(df_largo['value'], errors='coerce')
+df_largo = df_largo.dropna(subset=['year', 'value'])
+
+#Quitar filas sin país o con 'None'
+if 'country_name' in df_largo.columns:
+    df_largo = df_largo[df_largo['country_name'].notna() & (df_largo['country_name'].astype(str).str.strip().str.lower() != 'none')]
+
+#Filtrar el indicador que interesa
+target_names = [
+    "Gasto corriente en salud (% del PIB)",
+    "Current health expenditure (% of GDP)"
+]
+df_temporal2 = df_largo[df_largo['indicator_name'].isin(target_names)].copy()
+
+#dejar sólo países con código ISO3 (evitar agregados/regiones)
+if 'country_code' in df_temporal2.columns:
+    df_temporal2 = df_temporal2[df_temporal2['country_code'].astype(str).str.len() == 3]
+
+#Orden final
+df_temporal2 = df_temporal2.sort_values(by=['country_name', 'year']).reset_index(drop=True)
+
+out_min = df_temporal2.rename(columns={'country_name': 'pais'})[['pais', 'year', 'value']]
+
+#metadatos útiles para merge:
+out_full = df_temporal2.rename(columns={'country_name': 'pais'})[['pais', 'country_code', 'indicator_name', 'year', 'value']]
+
+# Reordenar columnas: country_name, country_code, indicator_name, year, value
+cols_order = ['country_name', 'country_code', 'indicator_name', 'year', 'value']
+df_gastos_en_salud_final = df_temporal2[cols_order].copy()
+
+#asegurar tipos
+df_gastos_en_salud_final['year'] = pd.to_numeric(df_gastos_en_salud_final['year'], errors='coerce').astype('Int64')
+df_gastos_en_salud_final['value'] = pd.to_numeric(df_gastos_en_salud_final['value'], errors='coerce')
+
+#Ordenar filas por país, indicador y año
+df_gastos_en_salud_final = df_gastos_en_salud_final.sort_values(by=['country_name', 'indicator_name', 'year']).reset_index(drop=True)
+
+# Vista rápida
+display(df_gastos_en_salud_final.head(100))
+
+Reflexión: AL CODIGO HUBO QUE HACERLE CAMBIOS EN LOS NOMBRES Y ADAPTACIONES EN LA LIMPIEZA
+
+Fecha: 23/11/2025
+Herramienta: copiloto
+Descripción: ayuda para leer un json con formato del banco mundial el cual no tiene formato tidy
+Resumen [Código generado]: 
+
+# -----------------------
+# 2. CARGA DEL JSON
+# -----------------------
+
+print("SUBE ARCHIVO JSON DE GASTO EN SALUD")
+uploaded_json = files.upload()
+json_filename = list(uploaded_json.keys())[0]
+print("JSON cargado:", json_filename)
+
+# Leer JSON correctamente
+with open(json_filename, "r", encoding="utf-8") as f:
+    data_json = json.load(f)
+
+# Normalizar JSON en DataFrame
+df_gasto_salud = pd.json_normalize(data_json)
+
+Reflexión: el codigo no presentó errores de funcionamiento, pero si debe ser colocado al principio
+
+
+Fecha: 23/11/2025
+Herramienta:
 Descripción:
 Resumen [Código generado]: 
 Reflexión:
 
-Fecha:
-Derramienta:
+
+Fecha: 23/11/2025
+Herramienta:
 Descripción:
 Resumen [Código generado]: 
 Reflexión:
