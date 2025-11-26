@@ -1,1 +1,20 @@
+El repositorio debe incluir un archivo README con descripción del proyecto, fuentes de 
+datos (nombre, enlace, fecha de descarga, licencia), instrucciones de ejecución y 
+requerimientos (requirements.txt). 
 
+Descripcion breve del proyecto: El presente proyecto tiene como objetivo realizar un análisis descriptivo de las
+principales variables que tienen que ver con la prevalencia de enfermedades 
+infecciones tales como HIV, TUBERCULOSIS y Dengue en diferentes países alrededor 
+del mundo junto con las características económicas de estos países. 
+
+Informacion de las bases de datos:
+
+FECHA DE DESCARGA: 12-11-25
+
+BASE DENGUE 1
+dengue-global-data-2025-11-12.xlsx
+https://worldhealthorg.shinyapps.io/dengue_global/
+LICENCIA: Creative Commons Attribution 4.0 International (CC BY 4.0)
+
+BASE DENGUE 2
+BASE
