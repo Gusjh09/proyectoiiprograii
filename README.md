@@ -34,6 +34,12 @@ Gasto_corriente_en_salud_PIB(1).json
 https://datos.bancomundial.org/indicador/SH.XPD.CHEX.GD.ZS
 *Esta base originalmete se encuentra en XLS, pero para efectos del proyecto se traslada a JSON con autorizacion del docente
 
+BASE INDICE DE PROBREZA
+indice de pobreza global.csv
+https://pip.worldbank.org/
+
+
+
 INSTRUCCIONES DE EJECUCIÓN:
 
 1. ESTE PROYECTO ESTA DISEÑADO PARA SER EJECUTADO EN GOOGLE COLAB
