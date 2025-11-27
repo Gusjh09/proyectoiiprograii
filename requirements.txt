@@ -1,9 +1,21 @@
 INSTRUCCIONES DE EJECUCIÓN:
 
-    1 ESTE PROYECTO ESTA DISEÑADO PARA SER EJECUTADO EN GOOGLE COLAB
-    2 CARGAR EL CUADERNO DISPONIBLE EN SRC https://github.com/Gusjh09/proyectoiiprograii/tree/main/src
-    3 USAR LAS BASES DISPONIBLES https://github.com/Gusjh09/proyectoiiprograii/tree/main/data_raw
-    4 EJECUTAR EN ORDEN VERTICAL CADA CHUNK.
+    ESTE PROYECTO ESTA DISEÑADO PARA SER EJECUTADO EN GOOGLE COLAB CON NOMBRE PROYECTO II(8) UBICADO EN SRC
+    CARGAR EL CUADERNO DISPONIBLE EN SRC https://github.com/Gusjh09/proyectoiiprograii/tree/main/src
+    USAR LAS BASES DISPONIBLES https://github.com/Gusjh09/proyectoiiprograii/tree/main/data_raw OJO, DEBE SER EN ESTE ORDEN DECENDENTE:
+
+dengue-global-data-2025-11-12.xlsx
+HIV_estimates_from_1990-to-present.xlsx 
+indice de pobreza global.csv 
+number-of-tuberculosis-cases.csv 
+Gasto_corriente_en_salud_PIB(1).json 
+National_extract_V1_3.csv
+
+    EJECUTAR EN ORDEN VERTICAL CADA CHUNK.
+    CUANDO SE INDIQUE INGRESE SU TOKEN DESDE NGROK
+    EJECUTE EL CHUNK DE SHINY, SEGUIDAMENTE VISITE LA URL PROPORCIONADA. SI EL SERVIDOR LEVANTÓ LA APLICACION DEBE MOSTRARLE UN SLIDE Y UN GRAFICO.
+    CONTINUE CON LA EJECUCION DE LAS SECCIONES OPCIONALES
+
 
 
 
