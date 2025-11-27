@@ -168,11 +168,32 @@ df_gasto_salud = pd.json_normalize(data_json)
 Reflexión: el codigo no presentó errores de funcionamiento, pero si debe ser colocado al principio
 
 
-Fecha: 23/11/2025
-Herramienta:
-Descripción:
+Fecha: 26/11/2025
+Herramienta: Chat GPT
+Descripción: Ayuda para levantar el servidor desde colab 
 Resumen [Código generado]: 
-Reflexión:
+# ============================
+# 4. Lanzar el servidor Shiny
+# ============================
+from shiny import run_app
+
+def run_shiny():
+    run_app(app, host="0.0.0.0", port=8000)
+
+threading.Thread(target=run_shiny).start()
+
+# ============================
+# 5. ngrok — abre el túnel
+# ============================
+NGROK_TOKEN = "PON_AQUI_TU_TOKEN_DE_NGROK"
+ngrok.set_auth_token(NGROK_TOKEN)
+
+public_url = ngrok.connect(8000)
+print("🚀 Tu app está lista en:")
+print(public_url)
+Reflexión: No podiamos levantar el servidor porque el codigo que estabamos usando no era el adecuado para google colab, entonces hubo que modificar 
+varias cosas entre ellas el cierre del programa, ademas tuvimos que ver como apagar los servidores activos que no se estaban usando, 
+porque eso detenia los navegadores de interner. al final si pudimos correr la aplicacion 
 
 
 Fecha: 23/11/2025
