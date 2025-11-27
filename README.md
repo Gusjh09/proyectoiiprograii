@@ -17,24 +17,29 @@ dengue-global-data-2025-11-12.xlsx
 https://worldhealthorg.shinyapps.io/dengue_global/
 LICENCIA: Creative Commons Attribution 4.0 International (CC BY 4.0)
 
-BASE DENGUE 2
+BASE DENGUE 
+Content licensed under CC BY 4.0.
 National_extract_V1_3.csv
 https://opendengue.org/
 
 BASE TUBERCULOSIS 
+Our charts, articles, and data are licensed under CC BY, unless stated otherwise
 number-of-tuberculosis-cases.csv
 https://ourworldindata.org/grapher/number-of-tuberculosis-cases
 
 BASE HIV 
+Licence: CC BY-NC-SA 3.0 IGO. 
 HIV_estimates_from_1990-to-present.xlsx
 https://www.unaids.org/en/resources/documents/2025/HIV_estimates_with_uncertainty_bounds_1990-present
 
 BASE GASTO DEL PIB EN SALUD POR PAIS
+Licencia Creative Commons Reconocimiento 4.0 Internacional (CC BY 4.0)
 Gasto_corriente_en_salud_PIB(1).json
 https://datos.bancomundial.org/indicador/SH.XPD.CHEX.GD.ZS
 *Esta base originalmete se encuentra en XLS, pero para efectos del proyecto se traslada a JSON con autorizacion del docente
 
 BASE INDICE DE PROBREZA
+Licencia Creative Commons Reconocimiento 4.0 Internacional (CC BY 4.0)
 indice de pobreza global.csv
 https://pip.worldbank.org/
 
