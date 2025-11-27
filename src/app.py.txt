@@ -1,0 +1,93 @@
+!pip install shiny
+from shiny import App, ui, render, reactive
+import pandas as pd
+import matplotlib.pyplot as plt
+
+df = df_unificado
+df = df.sort_values(["country", "year"])
+
+app_ui = ui.page_navbar(
+
+    ui.nav_panel(
+        "Dashboard",
+
+        ui.layout_sidebar(
+
+            ui.sidebar(
+                ui.h3("Filtros"),
+
+                ui.input_select(
+                    "pais",
+                    "País:",
+                    sorted(df["country"].dropna().unique())
+                ),
+
+                ui.input_slider(
+                    "year_range",
+                    "Rango de años:",
+                    min(df["year"]),
+                    max(df["year"]),
+                    value=(min(df["year"]), max(df["year"]))
+                ),
+
+                ui.input_select(
+                    "indicador",
+                    "Indicador:",
+                    {
+                        "dengue_cases": "Casos de Dengue",
+                        "tb_cases": "Casos de Tuberculosis",
+                        "hiv_cases": "Casos de VIH",
+                        "value": "PPP (World Bank)",
+                        "ppp": "PPP Alternativo"
+                    }
+                )
+            ),
+
+            ui.h3("Tabla de Datos"),
+            ui.output_table("tabla"),
+
+            ui.h3("Gráfico del Indicador"),
+            ui.output_plot("grafico")
+        )
+    ),
+
+    ui.nav_panel(
+        "Descripción",
+        ui.p("""
+        Esta aplicación permite visualizar indicadores de salud y PPP
+        filtrados por país e intervalo de años usando Shiny para Python.
+        """)
+    ),
+
+    title="Dashboard Salud & PPP"
+)
+
+def server(input, output, session):
+
+    @reactive.Calc
+    def datos_filtrados():
+        d = df[df["country"] == input.pais()]
+        yr_low, yr_high = input.year_range()
+        d = d[(d["year"] >= yr_low) & (d["year"] <= yr_high)]
+        return d
+
+    @output
+    @render.table
+    def tabla():
+        return datos_filtrados()[["country", "year", input.indicador()]]
+
+    @output
+    @render.plot
+    def grafico():
+        d = datos_filtrados()
+        indicador = input.indicador()
+
+        fig, ax = plt.subplots()
+        ax.plot(d["year"], d[indicador], marker="o")
+        ax.set_title(f"{indicador} en {input.pais()}")
+        ax.set_xlabel("Año")
+        ax.set_ylabel(indicador)
+        ax.grid(True)
+        return fig
+
+app = App(app_ui, server)
