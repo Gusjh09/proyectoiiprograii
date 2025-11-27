@@ -50,7 +50,7 @@ INSTRUCCIONES DE EJECUCIÓN:
 
 1. ESTE PROYECTO ESTA DISEÑADO PARA SER EJECUTADO EN GOOGLE COLAB CON NOMBRE PROYECTO II(8) UBICADO EN SRC
 2. CARGAR EL CUADERNO DISPONIBLE EN SRC https://github.com/Gusjh09/proyectoiiprograii/tree/main/src
-3. USAR LAS BASES DISPONIBLES https://github.com/Gusjh09/proyectoiiprograii/tree/main/data_raw OJO, DEBE SER EN ESTE ORDEN DECENDENTE:
+3. USAR LAS BASES DISPONIBLES https://github.com/Gusjh09/proyectoiiprograii/tree/main/data_raw , DEBE SER EN ESTE ORDEN DECENDENTE:
    
 dengue-global-data-2025-11-12.xlsx
 HIV_estimates_from_1990-to-present.xlsx
