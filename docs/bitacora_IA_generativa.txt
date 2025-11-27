@@ -1,0 +1,892 @@
+• Requisitos de la bitácora: 
+• La bitácora debe almacenarse dentro del repositorio del proyecto, 
+preferiblemente en la carpeta /docs, en un archivo con nombre sugerido: 
+bitacora_IA_generativa.md. 
+• Cada entrada de la bitácora debe incluir, como mínimo: fecha, herramienta 
+utilizada, descripción breve del objetivo de la consulta, resumen de la respuesta 
+recibida y una reflexión corta sobre cómo se utilizó esa respuesta (qué se tomó, 
+qué se modificó, qué se descartó). 
+• Debe registrarse cualquier uso de IA generativa relacionado con: generación de 
+código, explicación de errores, propuestas de visualización, sugerencias de 
+estructura de informe o video, entre otros. 
+• La bitácora debe incluir, al menos, una reflexión general final por parte del grupo 
+sobre las ventajas y limitaciones del uso de IA generativa en el contexto de este 
+proyecto y del aprendizaje de programación para estadística. 
+• Buenas prácticas y lineamientos éticos: 
+• La IA generativa debe utilizarse como apoyo para el aprendizaje, no como 
+reemplazo del trabajo propio: el grupo es responsable de comprender y adaptar 
+cualquier código o explicación obtenida. 
+• No se debe copiar y pegar código completo sin revisión ni adaptación; es 
+responsabilidad del grupo verificar que el código funcione, entenderlo y 
+documentarlo adecuadamente. 
+• No se deben subir a herramientas de IA datos que tengan restricciones de 
+confidencialidad o licencias que lo prohíban. 
+• Se deben citar y reconocer, cuando corresponda, las contribuciones 
+significativas de la IA en el informe o en la documentación (por ejemplo, 
+indicando que ciertas ideas o fragmentos de código fueron sugeridos y luego 
+adaptados por una herramienta de IA generativa).
+
+-----------------------------------------------------------ENTRADAS------------------------------------------------------------------
+Fecha:15/11/25
+Derramienta: COPILOT
+Descripción: SOPORTE PARA TOMAR VARIAS FILAS DE MESES Y AGRUPARLAS EN UNA SOLA FILA LLAMADA AÑO
+Resumen [Código generado]: 
+# Supongamos que tu DataFrame se llama df
+# Paso 1: Convertir la columna 'date' a tipo datetime
+df['date'] = pd.to_datetime(df['date'])
+
+# Paso 2: Crear una columna 'year'
+df['year'] = df['date'].dt.year
+
+# Paso 3: Agrupar por país y año, sumando los casos
+df_grouped = df.groupby(['country', 'year'], as_index=False)['cases'].sum()
+Reflexión: HUBO QUE CAMBIAR LOS DATOS DEL DATA FRAME, NO SE DESCARTÓ NINGUN CÓDIGO, FUE DE AYUDA EL SABER QUE HABÍA QUE CONVERTIR LA COLUMNA A DATATIME
+
+
+Fecha: 23/11/2025
+Derramienta: Copilot
+Descripción: AYUDA PARA PROCESAR EL JSON DEL BANCO MUNDIAL PARA PASARLO A FORMATO TIDY
+Resumen [Código generado]: 
+#Esta base es la de tipo json. requiere un tratamiento especial
+#Quitar las primeras filas que no aportan informacion
+df_temp = df_gasto_salud.copy()
+df_temp = df_temp.iloc[2:].reset_index(drop=True)
+
+#Usar la primera fila como encabezado real
+#La nueva fila 0 ahora tiene los nombres reales de columnas (Country Name, Country Code, Indicator Name, 2000, 2001, ...)
+new_header = df_temp.iloc[0]
+df_temp = df_temp.iloc[1:].reset_index(drop=True)
+df_temp.columns = new_header
+
+#Eliminar columnas 'Unnamed' y vacías que hay varias
+df_temp = df_temp.loc[:, ~df_temp.columns.astype(str).str.contains(r'^Unnamed', na=False)]
+df_temp = df_temp[[c for c in df_temp.columns if str(c).strip() != '' and c is not None]]
+
+#Pasar a formato largo (tidy) year–value o hacer la transposición
+#nombres de columnas
+rename_map = {
+    'Country Name': 'country_name',
+    'Country Code': 'country_code',
+    'Indicator Name': 'indicator_name',
+    'Indicator Code': 'indicator_code'  # por si existiera
+}
+df_temp = df_temp.rename(columns={k: v for k, v in rename_map.items() if k in df_temp.columns})
+
+#Detectar columnas de año: están como '2000.0', '2001.0',...
+def es_col_anio(col):
+    s = str(col).strip()
+    s = s[:-2] if s.endswith('.0') else s
+    return s.isdigit() and len(s) == 4
+
+year_cols = [c for c in df_temp.columns if es_col_anio(c)]
+if not year_cols:
+    raise ValueError("No se detectaron columnas de año. Revisa los nombres (p.ej. '2000.0').")
+
+#Construir id_vars presentes
+id_vars = [c for c in ['country_name', 'country_code', 'indicator_name', 'indicator_code'] if c in df_temp.columns]
+
+df_largo = df_temp.melt(
+    id_vars=id_vars,
+    value_vars=year_cols,
+    var_name='year_raw',
+    value_name='value'
+)
+
+#Convertir 'year_raw' a 'year' numérico limpio
+def limpiar_year(y):
+    s = str(y).strip()
+    s = s[:-2] if s.endswith('.0') else s
+    return pd.to_numeric(s, errors='coerce')
+
+df_largo['year'] = df_largo['year_raw'].apply(limpiar_year)
+df_largo.drop(columns=['year_raw'], inplace=True)
+
+#Tipos y limpieza básica
+df_largo['value'] = pd.to_numeric(df_largo['value'], errors='coerce')
+df_largo = df_largo.dropna(subset=['year', 'value'])
+
+#Quitar filas sin país o con 'None'
+if 'country_name' in df_largo.columns:
+    df_largo = df_largo[df_largo['country_name'].notna() & (df_largo['country_name'].astype(str).str.strip().str.lower() != 'none')]
+
+#Filtrar el indicador que interesa
+target_names = [
+    "Gasto corriente en salud (% del PIB)",
+    "Current health expenditure (% of GDP)"
+]
+df_temporal2 = df_largo[df_largo['indicator_name'].isin(target_names)].copy()
+
+#dejar sólo países con código ISO3 (evitar agregados/regiones)
+if 'country_code' in df_temporal2.columns:
+    df_temporal2 = df_temporal2[df_temporal2['country_code'].astype(str).str.len() == 3]
+
+#Orden final
+df_temporal2 = df_temporal2.sort_values(by=['country_name', 'year']).reset_index(drop=True)
+
+out_min = df_temporal2.rename(columns={'country_name': 'pais'})[['pais', 'year', 'value']]
+
+#metadatos útiles para merge:
+out_full = df_temporal2.rename(columns={'country_name': 'pais'})[['pais', 'country_code', 'indicator_name', 'year', 'value']]
+
+# Reordenar columnas: country_name, country_code, indicator_name, year, value
+cols_order = ['country_name', 'country_code', 'indicator_name', 'year', 'value']
+df_gastos_en_salud_final = df_temporal2[cols_order].copy()
+
+#asegurar tipos
+df_gastos_en_salud_final['year'] = pd.to_numeric(df_gastos_en_salud_final['year'], errors='coerce').astype('Int64')
+df_gastos_en_salud_final['value'] = pd.to_numeric(df_gastos_en_salud_final['value'], errors='coerce')
+
+#Ordenar filas por país, indicador y año
+df_gastos_en_salud_final = df_gastos_en_salud_final.sort_values(by=['country_name', 'indicator_name', 'year']).reset_index(drop=True)
+
+# Vista rápida
+display(df_gastos_en_salud_final.head(100))
+
+Reflexión: AL CODIGO HUBO QUE HACERLE CAMBIOS EN LOS NOMBRES Y ADAPTACIONES EN LA LIMPIEZA
+
+Fecha: 23/11/2025
+Herramienta: copiloto
+Descripción: ayuda para leer un json con formato del banco mundial el cual no tiene formato tidy
+Resumen [Código generado]: 
+
+# -----------------------
+# 2. CARGA DEL JSON
+# -----------------------
+
+print("SUBE ARCHIVO JSON DE GASTO EN SALUD")
+uploaded_json = files.upload()
+json_filename = list(uploaded_json.keys())[0]
+print("JSON cargado:", json_filename)
+
+# Leer JSON correctamente
+with open(json_filename, "r", encoding="utf-8") as f:
+    data_json = json.load(f)
+
+# Normalizar JSON en DataFrame
+df_gasto_salud = pd.json_normalize(data_json)
+
+Reflexión: el codigo no presentó errores de funcionamiento, pero si debe ser colocado al principio
+
+
+Fecha: 23/11/2025
+Herramienta:
+Descripción:
+Resumen [Código generado]: 
+Reflexión:
+
+
+
+Fecha: 19/11/2025
+Herramienta: ChatGPT 
+Descripción: Limpieza de la base de datos "índice de pobreza". Se uso la IA para descubrir como llenar NA's y eliminar columnas
+Resumen [Código generado]: 
+df_indice_pobreza["watts"] = df_indice_pobreza["watts"].fillna(df_indice_pobreza["watts"].median())
+df_indice_pobreza["ppp"] = df_indice_pobreza["ppp"].fillna(df_indice_pobreza["ppp"].median())
+df_indice_pobreza["reporting_pce"] = df_indice_pobreza["reporting_pce"].fillna(df_indice_pobreza["reporting_pce"].median())
+
+df_indice_pobreza= df_indice_pobreza.drop(columns=["estimation_type"])
+
+
+Reflexión: Todo corrió perfectamente y se entendió de manera muy intuitiva el código generado. Al ser un cálculo simple no es de mayor relevancia el hecho de como se genere.
+Fecha: 22/11/2025
+Herramienta:ChatGPT
+Descripción: Limpeza de la base de datos "Gasto en Salud"
+Resumen [Código generado]: 
+#Esta base es la de tipo json. requiere un tratamiento especial
+#Quitar las primeras filas que no aportan informacion
+df_temp = df_gasto_salud.copy()
+df_temp = df_temp.iloc[2:].reset_index(drop=True)
+
+#Usar la primera fila como encabezado real
+#La nueva fila 0 ahora tiene los nombres reales de columnas (Country Name, Country Code, Indicator Name, 2000, 2001, ...)
+new_header = df_temp.iloc[0]
+df_temp = df_temp.iloc[1:].reset_index(drop=True)
+df_temp.columns = new_header
+
+#Eliminar columnas 'Unnamed' y vacías que hay varias
+df_temp = df_temp.loc[:, ~df_temp.columns.astype(str).str.contains(r'^Unnamed', na=False)]
+df_temp = df_temp[[c for c in df_temp.columns if str(c).strip() != '' and c is not None]]
+
+#Pasar a formato largo (tidy) year–value o hacer la transposición
+#nombres de columnas
+rename_map = {
+    'Country Name': 'country_name',
+    'Country Code': 'country_code',
+    'Indicator Name': 'indicator_name',
+    'Indicator Code': 'indicator_code'  # por si existiera
+}
+df_temp = df_temp.rename(columns={k: v for k, v in rename_map.items() if k in df_temp.columns})
+
+#Detectar columnas de año: están como '2000.0', '2001.0',...
+def es_col_anio(col):
+    s = str(col).strip()
+    s = s[:-2] if s.endswith('.0') else s
+    return s.isdigit() and len(s) == 4
+
+year_cols = [c for c in df_temp.columns if es_col_anio(c)]
+if not year_cols:
+    raise ValueError("No se detectaron columnas de año. Revisa los nombres (p.ej. '2000.0').")
+
+#Construir id_vars presentes
+id_vars = [c for c in ['country_name', 'country_code', 'indicator_name', 'indicator_code'] if c in df_temp.columns]
+
+df_largo = df_temp.melt(
+    id_vars=id_vars,
+    value_vars=year_cols,
+    var_name='year_raw',
+    value_name='value'
+)
+
+#Convertir 'year_raw' a 'year' numérico limpio
+def limpiar_year(y):
+    s = str(y).strip()
+    s = s[:-2] if s.endswith('.0') else s
+    return pd.to_numeric(s, errors='coerce')
+
+df_largo['year'] = df_largo['year_raw'].apply(limpiar_year)
+df_largo.drop(columns=['year_raw'], inplace=True)
+
+#Tipos y limpieza básica
+df_largo['value'] = pd.to_numeric(df_largo['value'], errors='coerce')
+df_largo = df_largo.dropna(subset=['year', 'value'])
+
+#Quitar filas sin país o con 'None'
+if 'country_name' in df_largo.columns:
+    df_largo = df_largo[df_largo['country_name'].notna() & (df_largo['country_name'].astype(str).str.strip().str.lower() != 'none')]
+
+#Filtrar el indicador que interesa
+target_names = [
+    "Gasto corriente en salud (% del PIB)",
+    "Current health expenditure (% of GDP)"
+]
+df_temporal2 = df_largo[df_largo['indicator_name'].isin(target_names)].copy()
+
+#dejar sólo países con código ISO3 (evitar agregados/regiones)
+if 'country_code' in df_temporal2.columns:
+    df_temporal2 = df_temporal2[df_temporal2['country_code'].astype(str).str.len() == 3]
+
+#Orden final
+df_temporal2 = df_temporal2.sort_values(by=['country_name', 'year']).reset_index(drop=True)
+
+out_min = df_temporal2.rename(columns={'country_name': 'pais'})[['pais', 'year', 'value']]
+
+#metadatos útiles para merge:
+out_full = df_temporal2.rename(columns={'country_name': 'pais'})[['pais', 'country_code', 'indicator_name', 'year', 'value']]
+
+# Reordenar columnas: country_name, country_code, indicator_name, year, value
+cols_order = ['country_name', 'country_code', 'indicator_name', 'year', 'value']
+df_gastos_en_salud_final = df_temporal2[cols_order].copy()
+
+#asegurar tipos
+df_gastos_en_salud_final['year'] = pd.to_numeric(df_gastos_en_salud_final['year'], errors='coerce').astype('Int64')
+df_gastos_en_salud_final['value'] = pd.to_numeric(df_gastos_en_salud_final['value'], errors='coerce')
+
+#Ordenar filas por país, indicador y año
+df_gastos_en_salud_final = df_gastos_en_salud_final.sort_values(by=['country_name', 'indicator_name', 'year']).reset_index(drop=True)
+
+# Vista rápida
+display(df_gastos_en_salud_final.head(100))
+
+
+Reflexión: Esta parte fue hecha con inteligencia artificial debido a que la lógica era sencilla en algunas partes, pero bastante propensa a fallar por errores mínimos. Hay cierta lógica de programación que era muy avanzada, pero fundamental para limpiar la base que está en un formato complejo.
+
+Fecha: 23/11/2025
+Herramienta: ChatGPT y copilote 
+Descripción: ChatGPT se uso para algunas correciones a errores que estaban teniendo los código y para realizar un mapa con geopandas. Por otra parte, Copilote se usó para la estadística descriptiva. 
+Resumen [Código generado]: 
+pd.Series(clasificaciones).value_counts()
+
+paises = df_unificado["country"].unique()
+
+for pais in paises:
+    df_pais = df_unificado[df_unificado["country"] == pais].sort_values("year")
+
+    i = 0
+    encontrado = False
+
+    while i < len(df_pais):
+        casos = df_pais.iloc[i]["dengue_cases"]
+
+        if casos > 10000:
+            anio = df_pais.iloc[i]["year"]
+            print(f"{pais}: primer año con >10,000 casos es {anio}")
+            encontrado = True
+            break
+
+        i += 1
+
+    if not encontrado:
+        print(f"{pais}: nunca superó los 10,000 casos")
+
+
+def total_casos(df, pais, anio):
+    fila = df[(df["country"] == pais) & (df["year"] == anio)]
+
+    if fila.empty:
+        return None
+
+    total = (
+        fila["dengue_cases"].fillna(0).sum() +
+        fila["hiv_cases"].fillna(0).sum() +
+        fila["tb_cases"].fillna(0).sum()
+    )
+    return total
+
+
+total_casos(df_unificado,"cuba", 2010)
+
+
+class Pais:
+    def __init__(self, nombre, df):
+  
+        self.nombre = nombre
+        self.df = df[df["country"] == nombre]  # Filtra solo ese país
+
+    def casos_totales_anio(self, anio):
+        fila = self.df[self.df["year"] == anio]
+
+        if fila.empty:
+            return None
+
+        total = (
+            fila["dengue_cases"].fillna(0).sum() +
+            fila["hiv_cases"].fillna(0).sum() +
+            fila["tb_cases"].fillna(0).sum()
+        )
+        return total
+
+    def resumen(self):
+       
+        resumen = {}
+        for anio in sorted(self.df["year"].unique()):
+            resumen[anio] = self.casos_totales_anio(anio)
+
+plt.figure(figsize=(10,6))
+sns.boxplot(data=df_indice_pobreza, x='nivel_ingreso', y='ppp_log')
+plt.title('Distribución de PPP (log) por nivel de ingreso')
+plt.ylabel('PPP (log)')
+plt.xlabel('Nivel de ingreso')
+plt.show()
+
+
+# Filtrar años válidos si no lo hiciste antes
+df_salud_filtrado = df_unificado[df_unificado['year'].between(2010, 2024)]
+
+# Graficar evolución temporal del gasto en salud
+plt.figure(figsize=(10,6))
+sns.lineplot(data=df_salud_filtrado, x='year', y='value')
+plt.title('Evolución del gasto en salud por año')
+plt.ylabel('Gasto en salud')
+plt.xlabel('Año')
+plt.grid(True)
+plt.show()
+
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+#Limpieza de datos
+df_merge['country'] = df_merge['country'].str.strip().str.title()
+
+# Eliminar entradas que no son países reales
+excluir = ['Africa', 'Asia', 'Europe', 'Oceania', 'World']
+df_merge = df_merge[~df_merge['country'].isin(excluir)]
+
+#Calcular promedios
+df_promedio = df_merge.groupby('country')[['tb_cases','hiv_cases','dengue_cases']].mean().reset_index()
+
+#Eliminar países con todos los valores en cero
+df_promedio = df_promedio[(df_promedio[['tb_cases','hiv_cases','dengue_cases']] != 0).any(axis=1)]
+
+#Calcular total de casos promedio por país
+df_promedio['total'] = df_promedio[['tb_cases','hiv_cases','dengue_cases']].sum(axis=1)
+
+#Seleccionar los 10 países con más casos promedio
+top10 = df_promedio.nlargest(10, 'total')
+
+#Reorganizar para graficar
+df_promedio_melt = top10.melt(
+    id_vars='country',
+    value_vars=['tb_cases','hiv_cases','dengue_cases'],
+    var_name='enfermedad',
+    value_name='casos'
+)
+
+#Creación del gráfico
+plt.figure(figsize=(12,6))
+sns.barplot(data=df_promedio_melt, x='country', y='casos', hue='enfermedad')
+plt.title('Top 10 países con más casos promedio por enfermedad')
+plt.ylabel('Casos promedio')
+plt.xlabel('País')
+plt.xticks(rotation=45)
+plt.grid(True)
+plt.show()
+
+# Filtrar datos válidos
+df_dengue = df_merge.dropna(subset=['dengue_cases'])
+
+# Seleccionar 10 países aleatorios con datos
+paises_dengue = df_dengue['country'].dropna().unique()
+paises_seleccionados = pd.Series(paises_dengue).sample(8, random_state=70).tolist()
+
+df_dengue_filtrado = df_dengue[df_dengue['country'].isin(paises_seleccionados)]
+
+# Crear tabla pivote
+tabla_dengue = df_dengue_filtrado.pivot_table(
+    index='country',
+    columns='year',
+    values='dengue_cases',
+    aggfunc='sum'
+)
+
+# Graficar heatmap
+plt.figure(figsize=(12,6))
+sns.heatmap(tabla_dengue, cmap='YlOrRd', linewidths=0.5)
+plt.title('Mapa de calor de casos de dengue (10 países aleatorios)')
+plt.xlabel('Año')
+plt.ylabel('País')
+plt.show()
+
+        return resumen
+import geopandas as gpd
+import pandas as pd
+import folium
+
+world = gpd.read_file("https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson")
+world = world.rename(columns={"NAME": "country"})  
+
+
+df_unificado["total_cases"] = (
+    df_unificado["dengue_cases"].fillna(0) +
+    df_unificado["hiv_cases"].fillna(0) +
+    df_unificado["tb_cases"].fillna(0)
+)
+
+df_totales = df_unificado.groupby(["country", "year"], as_index=False)["total_cases"].sum()
+
+def mapa_por_anio(anio):
+  
+    df_anio = df_totales[df_totales["year"] == anio]
+    
+    mapa_gdf = world.merge(df_anio, on="country", how="left")
+    
+    m = folium.Map(location=[20, 0], zoom_start=2)
+    
+    folium.Choropleth(
+        geo_data=mapa_gdf,
+        name="choropleth",
+        data=mapa_gdf,
+        columns=["country", "total_cases"],
+        key_on="feature.properties.country",
+        fill_color="YlOrRd",
+        fill_opacity=0.7,
+        line_opacity=0.2,
+        legend_name=f"Total de casos en {anio}"
+    ).add_to(m)
+    
+    folium.LayerControl().add_to(m)
+    
+    return m
+
+mapa_por_anio(2020)
+
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+
+#Normalizamos los nombres de los país
+df_merge['country'] = df_merge['country'].str.strip().str.title()
+
+#Eliminamos entradas no válidas
+excluir = ['Africa', 'Asia', 'Europe', 'Oceania', 'World']
+df_merge = df_merge[~df_merge['country'].isin(excluir)]
+
+#Filtramos países con al menos un dato válido
+df_filtrado = df_merge[(df_merge[['tb_cases','hiv_cases','dengue_cases']] != 0).any(axis=1)]
+
+#Estadística descriptiva por país
+desc = df_filtrado.groupby('country')[['tb_cases','hiv_cases','dengue_cases']].agg(
+    ['mean', 'median', 'std', 'min', 'max']
+).round(2)
+
+#Percentiles 25 y 75
+percentiles = df_filtrado.groupby('country')[['tb_cases','hiv_cases','dengue_cases']].quantile([0.25, 0.75]).unstack()
+
+#Mostrar resumen para primeros países
+print("Medidas descriptivas:")
+print(desc.head(5))
+print("\nPercentiles:")
+print(percentiles.head(5))
+
+#CORRELACIÓN ENTRE INDICADORES
+corr = df_filtrado[['tb_cases','hiv_cases','dengue_cases']].dropna().corr()
+
+plt.figure(figsize=(6,4))
+sns.heatmap(corr, annot=True, cmap='coolwarm')
+plt.title('Correlación entre enfermedades')
+plt.show()
+
+# Simulación con distribución Poisson
+simulacion_dengue = np.random.poisson(lam=media_dengue, size=100)
+
+plt.figure(figsize=(8,4))
+sns.histplot(simulacion_dengue, bins=20, kde=True)
+plt.title('Simulación de brotes de dengue (Poisson)')
+plt.xlabel('Casos simulados')
+plt.ylabel('Frecuencia')
+plt.grid(True)
+plt.show()
+
+Reflexión: Fue muy funcional para detectar pequeños errores que estamos teniendo en nuestro código en la parte 4.1. Por otra parte, en la parte de mapas hizo posible su creación ya que ese contenido se escapaba por completo del contenido del curso, sin embargo, el código es difícil de entender y poco intuitivo.
+
+
+Fecha: 24/11/2025
+Herramienta: ChatGPT
+Descripción: Se unificó el nombre de las variables por medio de IA generativa, además, se agilizó el proceso de escritura de diccionarios.
+Resumen [Código generado]: 
+regiones_banco_mundial = {
+    "america del norte": "North America",
+    "america latina y el caribe": "Latin America & Caribbean",
+    "america latina y el caribe (birf y la aif)": "Latin America & Caribbean",
+    "america latina y el caribe (excluido altos ingresos)": "Latin America & Caribbean",
+    "asia meridional": "South Asia",
+    "asia meridional (birf y la aif)": "South Asia",
+    "asia oriental y el pacifico": "East Asia & Pacific",
+    "asia oriental y el pacifico (birf y la aif)": "East Asia & Pacific",
+    "asia oriental y el pacifico (excluido altos ingresos)": "East Asia & Pacific",
+    "africa": "Africa",
+    "africa al sur del sahara": "Sub-Saharan Africa",
+    "africa al sur del sahara (birf y la aif)": "Sub-Saharan Africa",
+    "africa al sur del sahara (excluido altos ingresos)": "Sub-Saharan Africa",
+    "medio oriente y norte de africa": "Middle East & North Africa",
+    "middle east and north africa": "Middle East & North Africa",
+    "oriente medio y norte de africa (birf y la aif)": "Middle East & North Africa",
+    "oriente medio y norte de africa (excluido altos ingresos)": "Middle East & North Africa",
+    "europa y asia central": "Europe & Central Asia",
+    "europa y asia central (birf y la aif)": "Europe & Central Asia",
+    "europa y asia central (excluido altos ingresos)": "Europe & Central Asia",
+    "europa central y del baltico": "Europe & Central Asia",
+    "caribbean": "Caribbean",
+    "asian and pacific": "Asia & Pacific",
+    "south america": "South America",
+    "north america": "North America",
+    "eastern and southern africa": "Sub-Saharan Africa",
+    "western and central africa": "Sub-Saharan Africa",
+    "eastern europe and central asia": "Europe & Central Asia",
+    "western and central europe and north america": "High Income",
+}
+grupos_ingreso = {
+    "ingreso alto": "High income",
+    "ingreso mediano": "Middle income",
+    "ingreso mediano alto": "Upper middle income",
+    "ingreso mediano y bajo": "Lower middle income",
+    "paises de ingreso bajo": "Low income",
+    "paises de ingreso mediano bajo": "Lower middle income",
+    "high-income countries": "High income",
+    "low-income countries": "Low income",
+    "upper-middle-income countries": "Upper middle income",
+    "lower-middle-income countries": "Lower middle income",
+}
+otros_grupos = {
+    "global": "World",
+    "world": "World",
+    "mundo": "World",
+    "zona del euro": "Eurozone",
+    "union europea": "European Union",
+    "el mundo arabe": "Arab World",
+    "miembros ocde": "OECD members",
+    "solo birf": "IBRD only",
+    "solo aif": "IDA only",
+    "total de la aif": "IDA total",
+    "fragiles y situaciones de conflicto afectados": "Fragile & conflict-affected",
+    "paises menos desarrollados: clasificacion de las naciones unidas": "Least developed countries",
+    "pequenos estados": "Small States",
+    "otros estados pequeos": "Small States",
+}
+paises_mal_escritos = {
+    "alemania": "Germany",
+    "arabia saudita": "Saudi Arabia",
+    "argelia": "Algeria",
+    "azerbaiyan": "Azerbaijan",
+    "belgica": "Belgium",
+    "birf y la aif": None,  
+    "brasil": "Brazil",
+    "cabo verde": "Cape Verde",
+    "camboya": "Cambodia",
+    "camerun": "Cameroon",
+    "chipre": "Cyprus",
+    "colombia": "Colombia",
+    "comoras": "Comoros",
+    "congo, republica del": "Congo",
+    "congo, republica democratica del": "Democratic Republic of the Congo",
+    "corea, republica de": "South Korea",
+    "cote divoire": "Côte d'Ivoire",
+    "dinamarca": "Denmark",
+    "egipto, republica arabe de": "Egypt",
+    "emiratos arabes unidos": "United Arab Emirates",
+    "espana": "Spain",
+    "estados unidos": "United States",
+    "etiopia": "Ethiopia",
+    "federacion de rusia": "Russia",
+    "filipinas": "Philippines",
+    "francia": "France",
+    "gambia, the": "Gambia",
+    "granada": "Grenada",
+    "grecia": "Greece",
+    "guinea ecuatorial": "Equatorial Guinea",
+    "hungria": "Hungary",
+    "india": "India",
+    "iran, islamic rep.": "Iran",
+    "iran, republica islamica del": "Iran",
+    "irlanda": "Ireland",
+    "islandia": "Iceland",
+    "italia": "Italy",
+    "japon": "Japan",
+    "jordania": "Jordan",
+    "kazajstan": "Kazakhstan",
+    "kirguistan": "Kyrgyzstan",
+    "letonia": "Latvia",
+    "libano": "Lebanon",
+    "lituania": "Lithuania",
+    "luxemburgo": "Luxembourg",
+    "macedonia del norte": "North Macedonia",
+    "malasia": "Malaysia",
+    "maldivas": "Maldives",
+    "marruecos": "Morocco",
+    "mauricio": "Mauritius",
+    "mexico": "Mexico",
+    "mongolia": "Mongolia",
+    "mozambique": "Mozambique",
+    "nicaragua": "Nicaragua",
+    "noruega": "Norway",
+    "nueva zelandia": "New Zealand",
+    "paises bajos": "Netherlands",
+    "panama": "Panama",
+    "paraguay": "Paraguay",
+    "peru": "Peru",
+    "polonia": "Poland",
+    "portugal": "Portugal",
+    "qatar": "Qatar",
+    "reino unido": "United Kingdom",
+    "republica centroafricana": "Central African Republic",
+    "republica checa": "Czech Republic",
+    "republica dominicana": "Dominican Republic",
+    "republica arabe siria": "Syria",
+    "rumania": "Romania",
+    "senegal": "Senegal",
+    "singapur": "Singapore",
+    "sudafrica": "South Africa",
+    "suecia": "Sweden",
+    "suiza": "Switzerland",
+    "syria": "Syria",
+    "tailandia": "Thailand",
+    "taiwan, china": "Taiwan",
+    "tunez": "Tunisia",
+    "turquia": "Turkey",
+    "ucrania": "Ukraine",
+    "uruguay": "Uruguay",
+    "uzbekistan": "Uzbekistan",
+    "venezuela": "Venezuela",
+    "viet nam": "Vietnam",
+    "yemen, rep.": "Yemen",
+    "zambia": "Zambia",
+    "zimbabwe": "Zimbabwe"
+}
+!pip install Unidecode country_converter
+import pandas as pd
+import unidecode
+import country_converter as coco
+df_unificado["country_clean"] = (
+    df_unificado["country"]
+    .astype(str)
+    .str.lower()
+    .str.strip()
+    .apply(unidecode.unidecode)
+)
+
+manual_map = {}
+manual_map.update(regiones_banco_mundial)
+manual_map.update(grupos_ingreso)
+manual_map.update(otros_grupos)
+manual_map.update(paises_mal_escritos)
+
+df_unificado["country_fixed"] = df_unificado["country_clean"].replace(manual_map)
+
+mask_convertible = df_unificado["country_fixed"].notna()
+
+df_unificado.loc[mask_convertible, "country_estandar"] = coco.convert(
+    df_unificado.loc[mask_convertible, "country_fixed"].tolist(),
+    to="name_short", not_found = None)
+
+Reflexión: Resueltó altamente ventajoso el hacer los diccionarios de nombres de manera generativa, debido a que se ahorró muchísimo el tiempo. Por otra parte, el código para reconocer equivalencias excede nuestro conocimiento por lo que fue una manera sencilla de resolver ese problema, sin embargo había que revisarlo constantemente para que no presentará fallas.
+
+
+Fecha: 25/11/2025
+Herramienta:ChatGPT
+Descripción: Realización de la aplicativo Shiny 
+Resumen [Código generado]: 
+from shiny import App, ui, render, reactive
+import pandas as pd
+import matplotlib.pyplot as plt
+
+df = df_unificado
+df = df.sort_values(["country", "year"])
+
+app_ui = ui.page_navbar(
+
+    ui.nav_panel(
+        "Dashboard",
+
+        ui.layout_sidebar(
+
+            ui.sidebar(
+                ui.h3("Filtros"),
+
+                ui.input_select(
+                    "pais",
+                    "País:",
+                    sorted(df["country"].dropna().unique())
+                ),
+
+                ui.input_slider(
+                    "year_range",
+                    "Rango de años:",
+                    min(df["year"]),
+                    max(df["year"]),
+                    value=(min(df["year"]), max(df["year"]))
+                ),
+
+                ui.input_select(
+                    "indicador",
+                    "Indicador:",
+                    {
+                        "dengue_cases": "Casos de Dengue",
+                        "tb_cases": "Casos de Tuberculosis",
+                        "hiv_cases": "Casos de VIH",
+                        "value": "PPP (World Bank)",
+                        "ppp": "PPP Alternativo"
+                    }
+                )
+            ),
+
+            ui.h3("Tabla de Datos"),
+            ui.output_table("tabla"),
+
+            ui.h3("Gráfico del Indicador"),
+            ui.output_plot("grafico")
+        )
+    ),
+
+    ui.nav_panel(
+        "Descripción",
+        ui.p("""
+        Esta aplicación permite visualizar indicadores de salud y PPP
+        filtrados por país e intervalo de años usando Shiny para Python.
+        """)
+    ),
+
+    title="Dashboard Salud & PPP"
+)
+
+def server(input, output, session):
+
+    @reactive.Calc
+    def datos_filtrados():
+        d = df[df["country"] == input.pais()]
+        yr_low, yr_high = input.year_range()
+        d = d[(d["year"] >= yr_low) & (d["year"] <= yr_high)]
+        return d
+
+    @output
+    @render.table
+    def tabla():
+        return datos_filtrados()[["country", "year", input.indicador()]]
+
+    @output
+    @render.plot
+    def grafico():
+        d = datos_filtrados()
+        indicador = input.indicador()
+
+        fig, ax = plt.subplots()
+        ax.plot(d["year"], d[indicador], marker="o")
+        ax.set_title(f"{indicador} en {input.pais()}")
+        ax.set_xlabel("Año")
+        ax.set_ylabel(indicador)
+        ax.grid(True)
+        return fig
+
+app = App(app_ui, server)
+
+Reflexión: La verdad es que fue muy útil hacer uso de inteligencia artificial para hacer el Shiny, ya que esta parte es bastante complicada de realizar y entender, además de ser propensa a errores pequeños. La IA de igual manera cometió varias veces errores (principalmente de versión), por lo que se tuvo que estar monitoreando constantemente.
+
+Fecha: 26/11/2025
+Herramienta: ChatGPT
+Descripción: Creación del portal ngrok y ajuste de modelo
+Resumen [Código generado]:
+NGROK_TOKEN = "Coloque su authtoken"
+
+# Instalar ngrok
+!wget -O ngrok.zip https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-stable-linux-amd64.zip
+!unzip -o ngrok.zip
+!chmod +x ngrok
+
+# Autenticación
+!./ngrok authtoken $NGROK_TOKEN
+
+# Iniciar túnel
+import subprocess, time, requests
+
+process = subprocess.Popen(["./ngrok", "http", "8000"])
+time.sleep(3)
+
+try:
+    tunnels = requests.get("http://localhost:4040/api/tunnels").json()
+    public_url = tunnels["tunnels"][0]["public_url"]
+    print("URL pública:", public_url)
+except Exception as e:
+    print("Error:", e)
+
+
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score, mean_squared_error
+import numpy as np
+
+df = df_unificado
+
+
+X = df[["dengue_cases", "tb_cases", "hiv_cases", "ppp", "total_cases"]]
+y = df["value"]
+
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42
+)
+
+modelo = LinearRegression()
+modelo.fit(X_train, y_train)
+y_pred = modelo.predict(X_test)
+
+r2 = r2_score(y_test, y_pred)
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+
+print("Resultados del modelo:")
+print(f"R²: {r2:.4f}")
+print(f"RMSE: {rmse:.4f}")
+
+coeficientes = pd.DataFrame({
+    "Variable": X.columns,
+    "Coeficiente": modelo.coef_
+})
+
+print("\nCoeficientes del modelo:")
+print(coeficientes)
+
+print("\nIntercepto del modelo:", modelo.intercept_)
+
+Reflexión: Se revisó el buen funcionamiento del ngrok y se investigó cómo hacer un ajuste de un modelo regresión. No hay gran desventaja ya que hacer un portal ngrok es básicamente solo pegar código
+
